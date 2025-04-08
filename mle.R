@@ -7,7 +7,8 @@ library(rmutil)
 #------------------------------------------------------------------------------#
 # Functions
 # Bivariate Simplex Regression Model
-dsimplex_fgm <- function(y1,y2,x,b01,b11,b02,b12,g01,g11,g02,g12,lambda){
+dsimplex_fgm <- function(y1,y2,x,b01,b11,b02,b12,g01,g11,g02,g12,
+                         lambda,log=FALSE){
   
   mu1 <- exp(b01+b11*x)/(1+exp(b01+b11*x))
   sigma1 <- exp(g01+g11*x)
@@ -23,7 +24,11 @@ dsimplex_fgm <- function(y1,y2,x,b01,b11,b02,b12,g01,g11,g02,g12,lambda){
     
   cop_fgm <- 1+lambda*(1-2*u)*(1-2*v)
   dsim_f <- dsim1*dsim2*cop_fgm
-  return(dsim_f)
+  
+  if(log==FALSE){return(dsim_f)}else{
+    return(log(dsim_f))
+  }
+  
 }
 
 # Likelihood function
@@ -38,14 +43,15 @@ logLikFun_sfgm <- function(param,y1,y2,x){
   g02 <- param[7]
   g12 <- param[8]
   lambda <- param[9]
-  func <- dsimplex_fgm(y1,y2,x,b01,b11,b02,b12,g01,g11,g02,g12,lambda)
-  lfunc <- -sum(log(func))
+  func <- dsimplex_fgm(y1,y2,x,b01,b11,b02,b12,g01,g11,g02,g12,
+                       lambda,log=TRUE)
+  lfunc <- sum(func)
   return(lfunc)
 }    
 
 #------------------------------------------------------------------------------#
 # data
-#setwd("~")
+setwd("/Users/jalmarcarrasco/Library/CloudStorage/OneDrive-Pessoal/Jalmar/Artigos/Papers_Desenvolvimento/The Simplex bivariate regression model/codes-data-MRSB")
 df.alagoas <- read.table("alagoas.txt", header = T)
 head(df.alagoas)
 summary(df.alagoas)
@@ -53,7 +59,7 @@ attach(df.alagoas)
 #------------------------------------------------------------------------------#
 y1 <- idhm       
 y2 <- ivs     
-x <- razdep
+x <- scale(razdep,center = TRUE, scale = TRUE)
 #------------------------------------------------------------------------------#
 # Optimization
 
@@ -61,13 +67,11 @@ chute <- c(b01 = .2, b11 = .2, b02 = .2, b12 = .2,
            g01 = .2, g11 = .2, g02 = .2, 
            g12 = .2, lambda = -.5)
 
-op <- optim(par=chute,logLikFun_sfgm,
-            y1=y1,y2=y2,x=x,hessian=T,
-            method = "L-BFGS-B",
-            lower=c(rep(-Inf,8),-1),
-            upper=c(rep(Inf,8),1))
+op <- optim(par=chute,logLikFun_sfgm,method="L-BFGS-B",y1=y1,y2=y2,x=x, 
+      lower=c(rep(-Inf,8),-1),upper=c(rep(Inf,8),1), 
+      hessian=T,control=list(maxit=10000,fnscale=-1,trace=1))
 
-ep <- sqrt(diag(solve(op$hessian)))
+ep <- sqrt(diag(-solve(op$hessian)))
 zvalue <- op$par/ep
 pvalue <- round(2*(1-pt(abs(zvalue), length(x)-length(op$par))),3)
 results <- cbind(op$par,ep,zvalue,pvalue)
