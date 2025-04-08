@@ -1,5 +1,5 @@
 # BSRM
-## Bivariate Simplex Regression Model for rates and proportions data
+## Bivariate Simplex regression model for rates and proportions data
 ### Authors
 Lucas S. Vieira,
 Emerson Amaral,
